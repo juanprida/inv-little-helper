@@ -67,23 +67,17 @@ class Mortgage:
 
 
 class Property:
-    def __init__(self, price, growth_rate, tax_rate, annual_rent):
-        self.price = price
-        self.growth_rate = growth_rate
-        self.tax_rate = tax_rate
-        self.tax = self.price * self.tax_rate
-        self.annual_rent = annual_rent
-
-    def compute_property_value(self, years):
-        return self.price * (1 + self.growth_rate) ** (years - 1)
-
-
-class PropertyInvestment:
-    def __init__(self, property, mortgage, interest_rate, years):
-        self.p = property
+    def __init__(self, mortgage, price, years, growth_rate, annual_income, purchase_tax_rate, initial_extra_expenses):
         self.m = mortgage
+        self.price = price
         self.years = years
-        self.interest_rate = interest_rate
+        self.growth_rate = growth_rate
+        self.annual_income = annual_income
+        self.purchase_tax_rate = purchase_tax_rate
+        self.initial_extra_expenses = initial_extra_expenses
+
+    def compute_property_value(self):
+        return self.price * (1 + self.growth_rate) ** (self.years - 1)
 
     def run(self):
         self.rent_benefits = self._compute_rent_benefits()
@@ -93,30 +87,25 @@ class PropertyInvestment:
         self.benefits = self._compute_benefits()
         self.cum_benefits = self._compute_cum_benefits(self.benefits)
 
-        # Discounted benefits
-        self.d_benefits = self._compute_discounted_benefits()
-        self.d_cum_benefits = self._compute_cum_benefits(self.d_benefits)
-
-        self.npv = sum(self.d_benefits)
+        self.npv = sum(self.benefits)
         self.profitability_index = self.npv / -self.selling_benefits[0]
         self.payback_period = next(t for t, cum_benefit in enumerate(self.cum_benefits) if cum_benefit >= 0) + 1
         self.irr = ((sum(self.benefits)) / -self.selling_benefits[0]) ** (1 / (self.years - 1)) - 1
-        self.rent_to_price_ratio = (sum(self.rent_benefits) / len(self.rent_benefits)) / self.p.price
+        self.rent_to_price_ratio = (sum(self.rent_benefits) / len(self.rent_benefits)) / self.price
 
     def _compute_rent_benefits(self):
-        return [self.p.annual_rent - self.m.annual_installment for t in range(0, self.years)]
+        return [self.annual_income - self.m.annual_installment for t in range(0, self.years)]
 
     def _compute_selling_benefits(self):
         selling_benefit = [0] * self.years
-        selling_benefit[0] = -(self.p.price * (self.m.down_payment_rate + self.p.tax_rate))
-        selling_benefit[-1] = self.p.compute_property_value(self.years) - self.m.compute_remaining_loan(self.years)
+        selling_benefit[0] = (
+            -(self.price * (self.m.down_payment_rate + self.purchase_tax_rate)) - self.initial_extra_expenses
+        )
+        selling_benefit[-1] = self.compute_property_value() - self.m.compute_remaining_loan(self.years)
         return selling_benefit
 
     def _compute_benefits(self):
         return [self.rent_benefits[t] + self.selling_benefits[t] for t in range(self.years)]
-
-    def _compute_discounted_benefits(self):
-        return [self.benefits[t] / (1 + self.interest_rate) ** t for t in range(self.years)]
 
     def _compute_cum_benefits(self, benefits):
         return [sum(benefits[: i + 1]) for i in range(len(benefits))]
