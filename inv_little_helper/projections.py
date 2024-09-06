@@ -76,8 +76,10 @@ class Property:
         self.purchase_tax_rate = purchase_tax_rate
         self.initial_extra_expenses = initial_extra_expenses
 
-    def compute_property_value(self):
-        return self.price * (1 + self.growth_rate) ** (self.years - 1)
+    def compute_property_value(self, years=None):
+        if years is None:
+            years = self.years
+        return self.price * (1 + self.growth_rate) ** (years - 1)
 
     def run(self):
         self.rent_benefits = self._compute_rent_benefits()

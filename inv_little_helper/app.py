@@ -78,6 +78,10 @@ def main():
     benefits_fig = investment.plot_time_series("Cumulative benefits", investment.cum_benefits)
     st.plotly_chart(benefits_fig)
 
+    price_per_year = [investment.compute_property_value(y) for y in range(investment_outlook_years)]
+    price_fig = investment.plot_time_series("Price of the property", price_per_year)
+    st.plotly_chart(price_fig)
+
 
 if __name__ == "__main__":
     main()
