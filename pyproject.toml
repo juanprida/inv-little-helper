@@ -2,7 +2,7 @@
 name = "inv-little-helper"
 version = "0.1.0"
 description = ""
-authors = ["Juan Prida pridaj.9@gmail.com"]
+authors = [{name = "Juan Prida", email = "pridaj.9@gmail.com"}]
 readme = "README.md"
 
 [tool.poetry.dependencies]
