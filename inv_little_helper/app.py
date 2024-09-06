@@ -16,7 +16,7 @@ def main():
     tax_rate = st.slider("Property Purchase Tax Rate (%)", 0.0, 30.0, 10.0, 5.0, format="%.0f%%") / 100
     down_payment_rate = st.slider("Down Payment Rate (%)", 0.0, 30.0, 20.0, 5.0, format="%.0f%%") / 100
     mortgage_rate = st.slider("Mortgage Rate (%)", 0.0, 5.0, 3.0, 0.1, format="%.1f%%") / 100
-    years = st.slider("Mortgage Term (Years)", 10, 30, 30, format="%.1f%%")
+    years = st.slider("Mortgage Term (Years)", 10, 30, 30)
 
     # Section: property details
     st.header("Property Details")
