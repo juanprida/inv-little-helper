@@ -76,7 +76,7 @@ class Property:
         self.profitability_index = self.cum_benefits[-1] / -self.benefits[0]
         try:
             self.payback_period = next(
-                t for t, cum_benefit in enumerate(self.cum_benefits) if cum_benefit >= - self.benefits[0]
+                t for t, cum_benefit in enumerate(self.cum_benefits) if cum_benefit >= 0
             )
         except StopIteration:
             self.payback_period = "NaN"
