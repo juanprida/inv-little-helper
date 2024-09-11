@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy_financial as npf
 import plotly.graph_objects as go
 
 
@@ -13,24 +14,15 @@ class Mortgage:
         self.mortgage_rate_month = mortgage_rate / 12
         self.n_installments = years * 12
 
-        self.installment = self._compute_installment()
+        self.installment = -npf.pmt(self.mortgage_rate / 12, self.years * 12, self.loan_amount)
         self.annual_installment = self.installment * 12
         self.total_payment = self.installment * self.n_installments
 
         # Lists to store the breakdown
-        self.principal_payments = []
-        self.interest_payments = []
-        self.cumulative_principal = []
-        self.cumulative_interest = []
+        self.cumulative_principal = [0]
+        self.cumulative_interest = [0]
 
         self._compute_payment_breakdown()
-
-    def _compute_installment(self):
-        return (
-            self.loan_amount
-            * (self.mortgage_rate_month * (1 + self.mortgage_rate_month) ** self.n_installments)
-            / ((1 + self.mortgage_rate_month) ** self.n_installments - 1)
-        )
 
     def _compute_payment_breakdown(self):
         remaining_balance = self.loan_amount
@@ -44,26 +36,17 @@ class Mortgage:
             # Update remaining balance
             remaining_balance -= principal_payment
 
-            # Store payments
-            self.principal_payments.append(principal_payment)
-            self.interest_payments.append(interest_payment)
-
             # Update cumulative values
             cumulative_principal += principal_payment
             cumulative_interest += interest_payment
 
-            self.cumulative_principal.append(cumulative_principal)
-            self.cumulative_interest.append(cumulative_interest)
+            if month % 12 == 0:
+                self.cumulative_principal.append(cumulative_principal)
+                self.cumulative_interest.append(cumulative_interest)
 
-    def compute_remaining_loan(self, n_installments_paid_years):
-        return (
-            self.loan_amount
-            * (
-                (1 + self.mortgage_rate_month) ** self.n_installments
-                - (1 + self.mortgage_rate_month) ** (n_installments_paid_years * 12)
-            )
-            / ((1 + self.mortgage_rate_month) ** self.n_installments - 1)
-        )
+    def compute_remaining_loan(self, years):
+        years = min(years, self.years)
+        return self.loan_amount - self.cumulative_principal[years]
 
 
 class Property:
@@ -79,7 +62,7 @@ class Property:
     def compute_property_value(self, years=None):
         if years is None:
             years = self.years
-        return self.price * (1 + self.growth_rate) ** (years - 1)
+        return self.price * (1 + self.growth_rate) ** (years)
 
     def run(self):
         self.rent_benefits = self._compute_rent_benefits()
@@ -90,16 +73,21 @@ class Property:
         self.cum_benefits = self._compute_cum_benefits(self.benefits)
 
         self.npv = sum(self.benefits)
-        self.profitability_index = self.npv / -self.selling_benefits[0]
-        self.payback_period = next(t for t, cum_benefit in enumerate(self.cum_benefits) if cum_benefit >= 0) + 1
-        self.irr = ((sum(self.benefits)) / -self.selling_benefits[0]) ** (1 / (self.years - 1)) - 1
-        self.rent_to_price_ratio = (sum(self.rent_benefits) / len(self.rent_benefits)) / self.price
+        self.profitability_index = self.cum_benefits[-1] / -self.benefits[0]
+        try:
+            self.payback_period = next(
+                t for t, cum_benefit in enumerate(self.cum_benefits) if cum_benefit >= - self.benefits[0]
+            )
+        except StopIteration:
+            self.payback_period = "NaN"
+        self.irr = npf.irr(self.benefits)
+        self.rent_to_price_ratio = self.annual_income / self.price
 
     def _compute_rent_benefits(self):
-        return [self.annual_income - self.m.annual_installment for t in range(0, self.years)]
+        return [0] + [self.annual_income - self.m.annual_installment for t in range(1, self.years + 1)]
 
     def _compute_selling_benefits(self):
-        selling_benefit = [0] * self.years
+        selling_benefit = [0] * (self.years + 1)
         selling_benefit[0] = (
             -(self.price * (self.m.down_payment_rate + self.purchase_tax_rate)) - self.initial_extra_expenses
         )
@@ -107,7 +95,7 @@ class Property:
         return selling_benefit
 
     def _compute_benefits(self):
-        return [self.rent_benefits[t] + self.selling_benefits[t] for t in range(self.years)]
+        return [self.rent_benefits[t] + self.selling_benefits[t] for t in range(self.years + 1)]
 
     def _compute_cum_benefits(self, benefits):
         return [sum(benefits[: i + 1]) for i in range(len(benefits))]
@@ -116,7 +104,7 @@ class Property:
         # Create a DataFrame for easy plotting
         df = pd.DataFrame(
             {
-                "Year": list(range(self.years)),
+                "Year": list(range(self.years + 1)),
                 name: [(v / 1000) for v in values],
             }
         )
